@@ -707,10 +707,12 @@ async function handleRequest(req: Request): Promise<Response> {
         }
 
         if (path === '/' && method === 'GET') {
-            return new Response(JSON.stringify({
-                message: "Welcome to the OpenAI API! Documentation is available at https://platform.openai.com/docs/api-reference"
-            }), {
-                status: 200,
+            return new Response(JSON.stringify(
+                {
+                        message: "Welcome to the OpenAI API! Documentation is available at https://platform.openai.com/docs/api-reference"
+                    }
+            ), {
+                status: 421,
                 headers: { ...Object.fromEntries(corsHeaders), 'Content-Type': 'application/json' }
             });
         }
