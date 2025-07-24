@@ -671,8 +671,8 @@ async function handleRequest(req: Request): Promise<Response> {
     }
 
     // Add correlation ID
-    const correlationID = req.headers.get('X-Correlation-ID') || generateUUID();
-    corsHeaders.set('X-Correlation-ID', correlationID);
+    const correlationID = req.headers.get('X-Request-ID') || generateUUID();
+    corsHeaders.set('X-Request-ID', correlationID);
 
     try {
         // Route handling
