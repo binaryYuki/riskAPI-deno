@@ -731,12 +731,12 @@ async function handleRequest(req: Request): Promise<Response> {
 
         if (path.startsWith('/cdn/')) {
             const name = path.slice('/cdn/'.length);
-            const allowed = ['edgeone', 'cloudflare', 'fastly'];
+            const allowed = ['edgeone', 'cloudflare', 'fastly', 'all'];
 
             if (!allowed.includes(name)) {
                 return new Response(JSON.stringify({
                     status: 'Bad Request',
-                    message: 'Available CDN lists: [edgeone, cloudflare, fastly]'
+                    message: 'Available CDN lists: [edgeone, cloudflare, fastly, all]'
                 }), {
                     status: 400,
                     headers: { ...Object.fromEntries(corsHeaders), 'Content-Type': 'application/json' }
@@ -747,10 +747,8 @@ async function handleRequest(req: Request): Promise<Response> {
                 if (name === 'cloudflare') {
                     // 直接从内存 map 读取
                     const content = cloudflareListMap.get('cloudflare') || '';
-                    // 获取更新时间，假设用 map 的 set/get 时间
-                    // 这里简单用当前时间戳，实际可维护一个更新时间变量
-                    const pulledAt = Date.now();
-                    const headers = { ...Object.fromEntries(corsHeaders), 'Content-Type': 'text/plain', 'X-Pulled-At': pulledAt.toString() };
+                    const pulledAt = new Date().toISOString().replace('T', ' ').substring(0, 19);
+                    const headers = { ...Object.fromEntries(corsHeaders), 'Content-Type': 'text/plain', 'X-Pulled-At': pulledAt };
                     return new Response(content, {
                         status: 200,
                         headers
@@ -758,9 +756,38 @@ async function handleRequest(req: Request): Promise<Response> {
                 } else if (name === 'fastly') {
                     // fastly 也从内存 map 读取
                     const content = fastlyListMap.get('fastly') || '';
-                    const pulledAt = Date.now();
-                    const headers = { ...Object.fromEntries(corsHeaders), 'Content-Type': 'text/plain', 'X-Pulled-At': pulledAt.toString() };
+                    const pulledAt = new Date().toISOString().replace('T', ' ').substring(0, 19);
+                    const headers = { ...Object.fromEntries(corsHeaders), 'Content-Type': 'text/plain', 'X-Pulled-At': pulledAt };
                     return new Response(content, {
+                        status: 200,
+                        headers
+                    });
+                } else if (name === 'all') {
+                    // 合并所有 CDN 的 CIDR 列表
+                    const pulledAt = new Date().toISOString().replace('T', ' ').substring(0, 19);
+                    let allContent = `# CDN CIDR Lists - Pulled at ${pulledAt}\n\n`;
+
+                    // EdgeOne
+                    try {
+                        const edgeoneContent = await Deno.readTextFile('data/edgeone.txt');
+                        allContent += '# EdgeOne\n';
+                        allContent += edgeoneContent.trim() + '\n\n';
+                    } catch {
+                        allContent += '# EdgeOne\n# (file not found)\n\n';
+                    }
+
+                    // Cloudflare
+                    const cloudflareContent = cloudflareListMap.get('cloudflare') || '';
+                    allContent += '# Cloudflare\n';
+                    allContent += cloudflareContent.trim() + '\n\n';
+
+                    // Fastly
+                    const fastlyContent = fastlyListMap.get('fastly') || '';
+                    allContent += '# Fastly\n';
+                    allContent += fastlyContent.trim() + '\n';
+
+                    const headers = { ...Object.fromEntries(corsHeaders), 'Content-Type': 'text/plain', 'X-Pulled-At': Date.now().toString() };
+                    return new Response(allContent, {
                         status: 200,
                         headers
                     });
