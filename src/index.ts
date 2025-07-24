@@ -747,16 +747,22 @@ async function handleRequest(req: Request): Promise<Response> {
                 if (name === 'cloudflare') {
                     // 直接从内存 map 读取
                     const content = cloudflareListMap.get('cloudflare') || '';
+                    // 获取更新时间，假设用 map 的 set/get 时间
+                    // 这里简单用当前时间戳，实际可维护一个更新时间变量
+                    const pulledAt = Date.now();
+                    const headers = { ...Object.fromEntries(corsHeaders), 'Content-Type': 'text/plain', 'X-Pulled-At': pulledAt.toString() };
                     return new Response(content, {
                         status: 200,
-                        headers: { ...Object.fromEntries(corsHeaders), 'Content-Type': 'text/plain' }
+                        headers
                     });
                 } else if (name === 'fastly') {
                     // fastly 也从内存 map 读取
                     const content = fastlyListMap.get('fastly') || '';
+                    const pulledAt = Date.now();
+                    const headers = { ...Object.fromEntries(corsHeaders), 'Content-Type': 'text/plain', 'X-Pulled-At': pulledAt.toString() };
                     return new Response(content, {
                         status: 200,
-                        headers: { ...Object.fromEntries(corsHeaders), 'Content-Type': 'text/plain' }
+                        headers
                     });
                 } else {
                     // 其它（如 edgeone）继续读文件
