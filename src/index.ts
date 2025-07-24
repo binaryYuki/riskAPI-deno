@@ -703,6 +703,15 @@ async function handleRequest(req: Request): Promise<Response> {
             return handleRequestIPCheck(ip, corsHeaders);
         }
 
+        if (path === '/' && method === 'GET') {
+            return new Response(JSON.stringify({
+                message: "Welcome to the OpenAI API! Documentation is available at https://platform.openai.com/docs/api-reference"
+            }), {
+                status: 200,
+                headers: { ...Object.fromEntries(corsHeaders), 'Content-Type': 'application/json' }
+            });
+        }
+
         if (path === '/api/status') {
             const count = riskySingleIPs.size + riskyCIDRInfo.length;
             return new Response(JSON.stringify({
