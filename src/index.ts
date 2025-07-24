@@ -567,6 +567,9 @@ async function updateFastlyIPs() {
     }
 }
 
+// Cloudflare 列表内存存储
+const cloudflareListMap = new Map<string, string>();
+
 async function updateCloudflareList() {
     try {
         const [v4Response, v6Response] = await Promise.all([
@@ -581,23 +584,25 @@ async function updateCloudflareList() {
             .map(l => l.trim())
             .filter(l => l !== '');
 
-        await Deno.mkdir('data', { recursive: true });
-        await Deno.writeTextFile('data/cloudflare.txt', lines.join('\n'));
-        console.log('Updated Cloudflare list');
+        // 存入内存 map
+        cloudflareListMap.set('cloudflare', lines.join('\n'));
+        console.log('Updated Cloudflare list (in memory)');
     } catch (error) {
         console.log('Cloudflare list update error:', error);
     }
 }
+
+// Fastly 列表内存存储
+const fastlyListMap = new Map<string, string>();
 
 async function updateFastlyList() {
     try {
         const response = await fetch('https://api.fastly.com/public-ip-list');
         const data = await response.json();
         const all = [...(data.addresses || []), ...(data.ipv6_addresses || [])];
-
-        await Deno.mkdir('data', { recursive: true });
-        await Deno.writeTextFile('data/fastly.txt', all.join('\n'));
-        console.log('Updated Fastly list');
+        // 存入内存 map
+        fastlyListMap.set('fastly', all.join('\n'));
+        console.log('Updated Fastly list (in memory)');
     } catch (error) {
         console.log('Fastly list update error:', error);
     }
@@ -741,12 +746,29 @@ async function handleRequest(req: Request): Promise<Response> {
             }
 
             try {
-                const filePath = `data/${name}.txt`;
-                const content = await Deno.readTextFile(filePath);
-                return new Response(content, {
-                    status: 200,
-                    headers: { ...Object.fromEntries(corsHeaders), 'Content-Type': 'text/plain' }
-                });
+                if (name === 'cloudflare') {
+                    // 直接从内存 map 读取
+                    const content = cloudflareListMap.get('cloudflare') || '';
+                    return new Response(content, {
+                        status: 200,
+                        headers: { ...Object.fromEntries(corsHeaders), 'Content-Type': 'text/plain' }
+                    });
+                } else if (name === 'fastly') {
+                    // fastly 也从内存 map 读取
+                    const content = fastlyListMap.get('fastly') || '';
+                    return new Response(content, {
+                        status: 200,
+                        headers: { ...Object.fromEntries(corsHeaders), 'Content-Type': 'text/plain' }
+                    });
+                } else {
+                    // 其它（如 edgeone）继续读文件
+                    const filePath = `data/${name}.txt`;
+                    const content = await Deno.readTextFile(filePath);
+                    return new Response(content, {
+                        status: 200,
+                        headers: { ...Object.fromEntries(corsHeaders), 'Content-Type': 'text/plain' }
+                    });
+                }
             } catch {
                 return new Response(JSON.stringify({
                     status: 'error',
