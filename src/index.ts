@@ -557,8 +557,6 @@ async function updateFastlyIPs() {
             };
             console.log('Using hardcoded Fastly IPs');
         }
-
-        const allProxies = [...localProxies, ...ipList.addresses, ...ipList.ipv6_addresses];
         fastlyCIDRs = [...ipList.addresses, ...ipList.ipv6_addresses];
 
         console.log(`Updated fastlyCIDRs: ${fastlyCIDRs.length} entries`);
@@ -737,10 +735,10 @@ async function handleRequest(req: Request): Promise<Response> {
 
             if (!allowed.includes(name)) {
                 return new Response(JSON.stringify({
-                    status: 'error',
-                    message: 'Not Found'
+                    status: 'Bad Request',
+                    message: 'Available CDN lists: [edgeone, cloudflare, fastly]'
                 }), {
-                    status: 404,
+                    status: 400,
                     headers: { ...Object.fromEntries(corsHeaders), 'Content-Type': 'application/json' }
                 });
             }
