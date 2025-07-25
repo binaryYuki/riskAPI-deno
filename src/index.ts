@@ -717,6 +717,12 @@ async function handleRequest(req: Request): Promise<Response> {
             });
         }
 
+        // /prepare path due to deno run will pause the deploy sometimes
+        if (path === '/prepare' && method === 'POST' || path === '/prepare' && method === 'GET') {
+            // 202
+            return new Response(null, { status: 202 });
+        }
+
         if (path === '/api/status') {
             const count = riskySingleIPs.size + riskyCIDRInfo.length;
             return new Response(JSON.stringify({
